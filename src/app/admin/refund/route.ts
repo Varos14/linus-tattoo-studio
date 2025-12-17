@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { prisma } from "@/lib/prisma";
+import { getDeposit, updateDeposit } from "@/lib/db";
 
 export async function POST(req: NextRequest) {
   // Basic Auth protection is enforced by middleware.ts for /admin/* routes
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   const amountCents = body.amountCents != null ? Number(body.amountCents) : undefined;
   if (!depositId) return NextResponse.json({ ok: false, error: "Missing depositId" }, { status: 400 });
 
-  const deposit = await prisma.deposit.findUnique({ where: { id: depositId } });
+  const deposit = await getDeposit(depositId);
   if (!deposit) return NextResponse.json({ ok: false, error: "Deposit not found" }, { status: 404 });
   if (!deposit.paymentIntentId) return NextResponse.json({ ok: false, error: "No paymentIntentId for this deposit" }, { status: 400 });
 
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Mark deposit as refunded
-    await prisma.deposit.update({ where: { id: deposit.id }, data: { paymentStatus: "refunded" } });
+    await updateDeposit(deposit.id, { paymentStatus: "refunded" });
 
     return NextResponse.json({ ok: true, refundId: refund.id });
   } catch (e: unknown) {

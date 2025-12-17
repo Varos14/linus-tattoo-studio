@@ -7,11 +7,14 @@ export default function GalleryPage() {
     "/WhatsApp Image 2025-10-07 at 12.55.41_71efb83d.jpg",
     "/neck tatoo.jpg",
     "/chest tatoo.jpg",
+    "/whites.jpeg",
     "/waist tatoo.jpg",
     "/hand tatoo.jpg",
     "/2 hand.jpg",
     "/linus face.jpg",
     "/lewis.jpg",
+     "/sydney.jpeg",
+      "/white artist.jpeg",
     "/location.jpg"
   ];
 

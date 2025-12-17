@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #3e0505;
   --foreground: #171717;
   --heading-font: var(--font-heading);
   --accent: #e5e7eb; /* subtle light accent for borders */

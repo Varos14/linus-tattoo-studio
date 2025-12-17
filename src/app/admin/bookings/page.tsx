@@ -1,6 +1,6 @@
-import { prisma } from "@/lib/prisma";
+import { getBookings, getDeposits } from "@/lib/db";
 import Link from "next/link";
-import { Prisma } from "@prisma/client";
+import { Deposit } from "@/lib/firebase";
 
 export const dynamic = "force-dynamic";
 
@@ -32,49 +32,27 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
   const from = (params["from"] || "") as string;
   const to = (params["to"] || "") as string;
 
-  const where: Prisma.BookingWhereInput = {};
   const fromDate = from ? new Date(from) : undefined;
   const toDate = to ? new Date(to) : undefined;
-  if (fromDate || toDate) {
-    const createdAtFilter: Prisma.DateTimeFilter = {};
-    if (fromDate) createdAtFilter.gte = fromDate;
-    if (toDate) createdAtFilter.lte = toDate;
-    where.createdAt = createdAtFilter;
-  }
 
-  let list: Array<Prisma.BookingGetPayload<{ include: { deposits: true } }>> = [];
+  const dateRange = fromDate || toDate ? { from: fromDate, to: toDate } : undefined;
 
-  if (q.trim()) {
-    const needle = `%${q.toLowerCase()}%`;
-    const idRows = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM Booking
-      WHERE (
-        LOWER(name) LIKE ${needle}
-        OR LOWER(email) LIKE ${needle}
-        OR LOWER(placement) LIKE ${needle}
-        OR LOWER(size) LIKE ${needle}
-      )
-      ${fromDate ? Prisma.sql`AND createdAt >= ${fromDate}` : Prisma.empty}
-      ${toDate ? Prisma.sql`AND createdAt <= ${toDate}` : Prisma.empty}
-      ORDER BY createdAt DESC
-      LIMIT 200
-    `;
+  const list = await getBookings({
+    search: q.trim() || undefined,
+    dateRange,
+    limit: q.trim() ? 200 : 100,
+  });
 
-    const ids = idRows.map((r) => r.id);
-    list = await prisma.booking.findMany({
-      where: { id: { in: ids }, ...(Object.keys(where).length ? where : {}) },
-      include: { deposits: true },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-    });
-  } else {
-    list = await prisma.booking.findMany({
-      where: Object.keys(where).length ? where : undefined,
-      include: { deposits: true },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    });
-  }
+  // For each booking, we need to get the associated deposits
+  const bookingsWithDeposits = await Promise.all(
+    list.map(async (booking) => {
+      const deposits = await getDeposits({
+        where: [{ field: 'bookingId', op: '==', value: booking.id }],
+        orderBy: { field: 'createdAt', direction: 'desc' },
+      });
+      return { ...booking, deposits };
+    })
+  );
 
   return (
     <div className="p-6 text-white">
@@ -133,10 +111,10 @@ export default async function BookingsPage({ searchParams }: { searchParams: Pro
             </tr>
           </thead>
           <tbody>
-            {list.map((b) => {
-              const totalCents = b.deposits.reduce((sum, d) => sum + (d.amount || 0), 0);
+            {bookingsWithDeposits.map((b) => {
+              const totalCents = b.deposits.reduce((sum: number, d: Deposit) => sum + (d.amount || 0), 0);
               const currency = b.deposits[0]?.currency || "USD";
-              const paidCount = b.deposits.filter((d) => (d.paymentStatus || "").toLowerCase() === "paid").length;
+              const paidCount = b.deposits.filter((d: Deposit) => (d.paymentStatus || "").toLowerCase() === "paid").length;
               const statusBadge = paidCount > 0 ? (
                 <span className="inline-block px-2 py-0.5 text-xs rounded bg-green-500/20 text-green-300">{paidCount} paid</span>
               ) : (

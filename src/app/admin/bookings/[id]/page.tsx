@@ -1,6 +1,7 @@
-import { prisma } from "@/lib/prisma";
+import { getBooking, getDeposits } from "@/lib/db";
 import Link from "next/link";
 import RefundButton from "@/components/admin/RefundButton";
+import type { Booking, Deposit } from "@/lib/firebase";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +29,10 @@ export default async function BookingDetailPage({ params, searchParams }: { para
     );
   }
 
-  const booking = await prisma.booking.findUnique({
-    where: { id },
-    include: { deposits: { orderBy: { createdAt: "desc" } } },
+  const booking = await getBooking(id);
+  const deposits = await getDeposits({
+    where: [{ field: 'bookingId', op: '==', value: id }],
+    orderBy: { field: 'createdAt', direction: 'desc' },
   });
 
   if (!booking) {
@@ -42,11 +44,13 @@ export default async function BookingDetailPage({ params, searchParams }: { para
     );
   }
 
-  const uploads: string[] = Array.isArray(booking.uploads as unknown)
-    ? ((booking.uploads as unknown[]) || []).map((u) => String(u))
+  const bookingWithDeposits = { ...booking, deposits };
+
+  const uploads: string[] = Array.isArray(bookingWithDeposits.uploads as unknown)
+    ? ((bookingWithDeposits.uploads as unknown[]) || []).map((u) => String(u))
     : [];
-  const totalCents = booking.deposits.reduce((sum, d) => sum + (d.amount || 0), 0);
-  const currency = booking.deposits[0]?.currency || "USD";
+  const totalCents = bookingWithDeposits.deposits.reduce((sum: number, d: Deposit) => sum + (d.amount || 0), 0);
+  const currency = bookingWithDeposits.deposits[0]?.currency || "USD";
 
   return (
     <div className="p-6 text-white space-y-6">
@@ -58,52 +62,52 @@ export default async function BookingDetailPage({ params, searchParams }: { para
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <div className="text-white/70 text-xs">Created</div>
-          <div>{new Date(booking.createdAt).toLocaleString()}</div>
+          <div>{new Date(bookingWithDeposits.createdAt).toLocaleString()}</div>
           <div className="text-white/70 text-xs mt-4">Booking ID</div>
-          <div className="break-all text-xs">{booking.id}</div>
+          <div className="break-all text-xs">{bookingWithDeposits.id}</div>
         </div>
         <div className="space-y-2">
           <div className="text-white/70 text-xs">Contact</div>
-          <div>{booking.name}</div>
-          <div className="text-white/80 text-sm">{booking.email}</div>
-          {booking.phone && <div className="text-white/70 text-sm">{booking.phone}</div>}
+          <div>{bookingWithDeposits.name}</div>
+          <div className="text-white/80 text-sm">{bookingWithDeposits.email}</div>
+          {bookingWithDeposits.phone && <div className="text-white/70 text-sm">{bookingWithDeposits.phone}</div>}
         </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <div className="text-white/70 text-xs">Placement</div>
-          <div>{booking.placement}</div>
+          <div>{bookingWithDeposits.placement}</div>
           <div className="text-white/70 text-xs mt-4">Size</div>
-          <div>{booking.size}</div>
-          {booking.style && (
+          <div>{bookingWithDeposits.size}</div>
+          {bookingWithDeposits.style && (
             <>
               <div className="text-white/70 text-xs mt-4">Style</div>
-              <div>{booking.style}</div>
+              <div>{bookingWithDeposits.style}</div>
             </>
           )}
-          {booking.preferredDates && (
+          {bookingWithDeposits.preferredDates && (
             <>
               <div className="text-white/70 text-xs mt-4">Preferred dates</div>
-              <div>{booking.preferredDates}</div>
+              <div>{bookingWithDeposits.preferredDates}</div>
             </>
           )}
-          {booking.budget && (
+          {bookingWithDeposits.budget && (
             <>
               <div className="text-white/70 text-xs mt-4">Budget</div>
-              <div>{booking.budget}</div>
+              <div>{bookingWithDeposits.budget}</div>
             </>
           )}
-          {booking.references && (
+          {bookingWithDeposits.references && (
             <>
               <div className="text-white/70 text-xs mt-4">References</div>
-              <div className="break-all text-xs whitespace-pre-wrap">{booking.references}</div>
+              <div className="break-all text-xs whitespace-pre-wrap">{bookingWithDeposits.references}</div>
             </>
           )}
         </div>
         <div className="space-y-2">
           <div className="text-white/70 text-xs">Idea</div>
-          <div className="whitespace-pre-wrap text-white/90">{booking.details}</div>
+          <div className="whitespace-pre-wrap text-white/90">{bookingWithDeposits.details}</div>
         </div>
       </div>
 
@@ -125,7 +129,7 @@ export default async function BookingDetailPage({ params, searchParams }: { para
           <h2 className="font-serif text-xl">Deposits</h2>
           <div className="text-white/70 text-sm">Total: {formatCurrency(totalCents, currency)}</div>
         </div>
-        {booking.deposits.length === 0 ? (
+        {bookingWithDeposits.deposits.length === 0 ? (
           <div className="text-white/70 text-sm">No deposits yet.</div>
         ) : (
           <div className="overflow-x-auto">
@@ -141,7 +145,7 @@ export default async function BookingDetailPage({ params, searchParams }: { para
                 </tr>
               </thead>
               <tbody>
-                {booking.deposits.map((d) => (
+                {bookingWithDeposits.deposits.map((d: Deposit) => (
                   <tr key={d.id} className="odd:bg-white/5">
                     <td className="p-2 align-top">{new Date(d.createdAt).toLocaleString()}</td>
                     <td className="p-2 align-top">{formatCurrency(d.amount, d.currency)}</td>

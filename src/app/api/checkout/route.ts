@@ -1,7 +1,7 @@
 // app/api/checkout/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { pesapalService } from '@/lib/pesapal';
-import { prisma } from '@/lib/prisma';
+import { createDeposit } from '@/lib/db';
 
 function getBaseUrl(req: NextRequest) {
   const host = req.headers.get("x-forwarded-host") || req.headers.get("host") || "localhost:3000";
@@ -74,21 +74,19 @@ export async function POST(req: NextRequest) {
 
     // Create a pending deposit record in database
     try {
-      await prisma.deposit.create({
-        data: {
-          sessionId: orderResponse.order_tracking_id,
-          email: email,
-          amount: amount,
-          currency: currency,
-          paymentStatus: 'Pending',
-          mode: process.env.PESAPAL_ENVIRONMENT || 'sandbox',
-          paymentIntentId: merchantReference,
-          bookingId: bookingId || null,
-          metadata: {
-            orderTrackingId: orderResponse.order_tracking_id,
-            merchantReference: orderResponse.merchant_reference,
-            createdAt: new Date().toISOString()
-          }
+      await createDeposit({
+        sessionId: orderResponse.order_tracking_id,
+        email: email,
+        amount: amount,
+        currency: currency,
+        paymentStatus: 'Pending',
+        mode: process.env.PESAPAL_ENVIRONMENT || 'sandbox',
+        paymentIntentId: merchantReference,
+        bookingId: bookingId || undefined,
+        metadata: {
+          orderTrackingId: orderResponse.order_tracking_id,
+          merchantReference: orderResponse.merchant_reference,
+          createdAt: new Date().toISOString()
         }
       });
       console.log("Deposit record created for:", orderResponse.order_tracking_id);

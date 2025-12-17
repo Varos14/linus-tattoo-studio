@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { getDeposits } from "@/lib/db";
+import type { Deposit } from "@/lib/firebase";
 
 export async function GET(req: NextRequest) {
   const token = process.env.ADMIN_ACCESS_TOKEN || "";
@@ -14,45 +14,17 @@ export async function GET(req: NextRequest) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const where: Prisma.DepositWhereInput = {};
   const fromDate = from ? new Date(from) : undefined;
   const toDate = to ? new Date(to) : undefined;
-  if (fromDate || toDate) {
-    const createdAtFilter: Prisma.DateTimeFilter = {};
-    if (fromDate) createdAtFilter.gte = fromDate;
-    if (toDate) createdAtFilter.lte = toDate;
-    where.createdAt = createdAtFilter;
-  }
+
+  const dateRange = fromDate || toDate ? { from: fromDate, to: toDate } : undefined;
 
   const limit = 4000;
-  let ids: string[] = [];
-  if (q.trim()) {
-    const needle = `%${q.toLowerCase()}%`;
-    const idRows = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM Deposit
-      WHERE (
-        LOWER(email) LIKE ${needle}
-        OR LOWER(sessionId) LIKE ${needle}
-      )
-      ${fromDate ? Prisma.sql`AND createdAt >= ${fromDate}` : Prisma.empty}
-      ${toDate ? Prisma.sql`AND createdAt <= ${toDate}` : Prisma.empty}
-      ORDER BY createdAt DESC
-      LIMIT ${limit}
-    `;
-    ids = idRows.map((r) => r.id);
-  }
-
-  const deposits = q.trim()
-    ? await prisma.deposit.findMany({
-        where: { id: { in: ids }, ...(Object.keys(where).length ? where : {}) },
-        orderBy: { createdAt: "desc" },
-        take: limit,
-      })
-    : await prisma.deposit.findMany({
-        where: Object.keys(where).length ? where : undefined,
-        orderBy: { createdAt: "desc" },
-        take: limit,
-      });
+  const deposits = await getDeposits({
+    search: q.trim() || undefined,
+    dateRange,
+    limit,
+  });
 
   const filtered = deposits;
 

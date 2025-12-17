@@ -14,12 +14,12 @@ export default function ArtistsPage() {
     },
     {
       name: "Jones",
-      image: "/lewis.jpg",
+      image: "/white artist.jpeg",
       specialty: "Specializes in geometric patterns and abstract art. Known for precise line work."
     },
     {
       name: "Varos",
-      image: "/location.jpg",
+      image: "/sydney.jpeg",
       specialty: "Master of watercolor techniques and realistic portraits. Brings imagination to life."
     }
   ];

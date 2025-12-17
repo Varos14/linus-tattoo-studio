@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { getBookings, getDeposits } from "@/lib/db";
+import type { Booking, Deposit } from "@/lib/firebase";
 
 export async function GET(req: NextRequest) {
   const token = process.env.ADMIN_ACCESS_TOKEN || "";
@@ -14,51 +14,30 @@ export async function GET(req: NextRequest) {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const where: Prisma.BookingWhereInput = {};
   const fromDate = from ? new Date(from) : undefined;
   const toDate = to ? new Date(to) : undefined;
-  if (fromDate || toDate) {
-    const createdAtFilter: Prisma.DateTimeFilter = {};
-    if (fromDate) createdAtFilter.gte = fromDate;
-    if (toDate) createdAtFilter.lte = toDate;
-    where.createdAt = createdAtFilter;
-  }
+
+  const dateRange = fromDate || toDate ? { from: fromDate, to: toDate } : undefined;
 
   const limit = 2000;
-  let ids: string[] = [];
-  if (q.trim()) {
-    const needle = `%${q.toLowerCase()}%`;
-    const idRows = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM Booking
-      WHERE (
-        LOWER(name) LIKE ${needle}
-        OR LOWER(email) LIKE ${needle}
-        OR LOWER(placement) LIKE ${needle}
-        OR LOWER(size) LIKE ${needle}
-      )
-      ${fromDate ? Prisma.sql`AND createdAt >= ${fromDate}` : Prisma.empty}
-      ${toDate ? Prisma.sql`AND createdAt <= ${toDate}` : Prisma.empty}
-      ORDER BY createdAt DESC
-      LIMIT ${limit}
-    `;
-    ids = idRows.map((r) => r.id);
-  }
+  const bookings = await getBookings({
+    search: q.trim() || undefined,
+    dateRange,
+    limit,
+  });
 
-  const bookings = q.trim()
-    ? await prisma.booking.findMany({
-        where: { id: { in: ids }, ...(Object.keys(where).length ? where : {}) },
-        include: { deposits: true },
-        orderBy: { createdAt: "desc" },
-        take: limit,
-      })
-    : await prisma.booking.findMany({
-        where: Object.keys(where).length ? where : undefined,
-        include: { deposits: true },
-        orderBy: { createdAt: "desc" },
-        take: limit,
+  // For each booking, we need to get the associated deposits
+  const bookingsWithDeposits = await Promise.all(
+    bookings.map(async (booking: Booking) => {
+      const deposits = await getDeposits({
+        where: [{ field: 'bookingId', op: '==', value: booking.id }],
+        orderBy: { field: 'createdAt', direction: 'desc' },
       });
+      return { ...booking, deposits };
+    })
+  );
 
-  const filtered = bookings;
+  const filtered = bookingsWithDeposits;
 
   const headers = [
     "id",

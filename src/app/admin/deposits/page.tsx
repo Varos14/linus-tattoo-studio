@@ -1,8 +1,7 @@
-import { prisma } from "@/lib/prisma";
+import { getDeposits, getBooking } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 import Link from "next/link";
-import { Prisma } from "@prisma/client";
 
 function formatCurrency(amount: number, currency: string) {
   const value = amount / 100;
@@ -31,36 +30,32 @@ export default async function DepositsPage({ searchParams }: { searchParams: Pro
   const from = (params["from"] || "") as string;
   const to = (params["to"] || "") as string;
 
-  const where: Prisma.DepositWhereInput = {};
-  const fromDate = from ? new Date(from as string) : undefined;
-  const toDate = to ? new Date(to as string) : undefined;
-  if (fromDate || toDate) {
-    const createdAtFilter: Prisma.DateTimeFilter = {};
-    if (fromDate) createdAtFilter.gte = fromDate;
-    if (toDate) createdAtFilter.lte = toDate;
-    where.createdAt = createdAtFilter;
-  }
+  const fromDate = from ? new Date(from) : undefined;
+  const toDate = to ? new Date(to) : undefined;
 
-  let list: Array<Prisma.DepositGetPayload<{ include: { booking: true } }>> = [];
+  const dateRange = fromDate || toDate ? { from: fromDate, to: toDate } : undefined;
 
-  if (q.trim()) {
-    const needle = `%${q.toLowerCase()}%`;
-    const idRows = await prisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM Deposit
-      WHERE (
-        LOWER(email) LIKE ${needle}
-        OR LOWER(sessionId) LIKE ${needle}
-      )
-      ${fromDate ? Prisma.sql`AND createdAt >= ${fromDate}` : Prisma.empty}
-      ${toDate ? Prisma.sql`AND createdAt <= ${toDate}` : Prisma.empty}
-      ORDER BY createdAt DESC
-      LIMIT 400
-    `;
-    const ids = idRows.map((r) => r.id);
-    list = await prisma.deposit.findMany({ include: { booking: true }, where: { id: { in: ids }, ...(Object.keys(where).length ? where : {}) }, orderBy: { createdAt: "desc" }, take: 400 });
-  } else {
-    list = await prisma.deposit.findMany({ include: { booking: true }, where: Object.keys(where).length ? where : undefined, orderBy: { createdAt: "desc" }, take: 200 });
-  }
+  const deposits = await getDeposits({
+    search: q.trim() || undefined,
+    dateRange,
+    limit: q.trim() ? 400 : 200,
+  });
+
+  // For each deposit, we need to get the associated booking if it exists
+  const depositsWithBookings = await Promise.all(
+    deposits.map(async (deposit) => {
+      let booking = undefined;
+      if (deposit.bookingId) {
+        try {
+          booking = await getBooking(deposit.bookingId);
+        } catch (error) {
+          // Booking might not exist, that's okay
+          console.warn(`Booking ${deposit.bookingId} not found for deposit ${deposit.id}`);
+        }
+      }
+      return { ...deposit, booking };
+    })
+  );
 
   return (
     <div className="p-6 text-white">
@@ -101,7 +96,7 @@ export default async function DepositsPage({ searchParams }: { searchParams: Pro
             </tr>
           </thead>
           <tbody>
-            {list.map((d) => (
+            {depositsWithBookings.map((d) => (
               <tr key={d.id} className="odd:bg-white/5">
                 <td className="p-2 align-top">{new Date(d.createdAt).toLocaleString()}</td>
                 <td className="p-2 align-top">{d.email || "—"}</td>

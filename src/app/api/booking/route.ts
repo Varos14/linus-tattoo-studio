@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { prisma } from "@/lib/prisma";
+import { createBooking } from "@/lib/db";
 
 const resendApiKey = process.env.RESEND_API_KEY;
 const toEmail = process.env.BOOKINGS_TO_EMAIL || process.env.NEXT_PUBLIC_STUDIO_EMAIL || "studio@example.com";
@@ -29,21 +29,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Persist booking
-    const booking = await prisma.booking.create({
-      data: {
-        name: String(body.name),
-        email: String(body.email),
-        phone: body.phone || null,
-        placement: String(body.placement),
-        size: String(body.size),
-        style: body.style || null,
-        preferredDates: body.preferredDates || null,
-        budget: body.budget || null,
-        references: body.references || null,
-        // avoid Prisma.JsonValue/ InputJsonValue types — cast to any
-        uploads: Array.isArray(body.uploads) ? (body.uploads as unknown as any) : null,
-        details: String(body.details),
-      },
+    const bookingId = await createBooking({
+      name: String(body.name),
+      email: String(body.email),
+      phone: body.phone || undefined,
+      placement: String(body.placement),
+      size: String(body.size),
+      style: body.style || undefined,
+      preferredDates: body.preferredDates || undefined,
+      budget: body.budget || undefined,
+      references: body.references || undefined,
+      uploads: Array.isArray(body.uploads) ? body.uploads : undefined,
+      details: String(body.details),
     });
 
     const html = renderEmail(body as BookingPayload);
@@ -53,7 +50,7 @@ export async function POST(req: NextRequest) {
       console.log("[booking email fallback] to:", toEmail);
       console.log("subject:", `New booking request from ${body.name}`);
       console.log(html);
-      return NextResponse.json({ ok: true, booked: true, bookingId: booking.id, queued: false, note: "No RESEND_API_KEY set; logged to server." });
+      return NextResponse.json({ ok: true, booked: true, bookingId, queued: false, note: "No RESEND_API_KEY set; logged to server." });
     }
 
     const resend = new Resend(resendApiKey);
@@ -65,7 +62,7 @@ export async function POST(req: NextRequest) {
       replyTo: String(body.email),
     });
 
-    return NextResponse.json({ ok: true, booked: true, bookingId: booking.id, queued: true });
+    return NextResponse.json({ ok: true, booked: true, bookingId, queued: true });
   } catch (e: unknown) {
     console.error(e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

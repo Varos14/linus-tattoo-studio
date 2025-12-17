@@ -13,8 +13,8 @@ export default function BookingPage() {
     <div className="py-20 animate-fade-in">
       <Container>
         <div className="text-center mb-12">
-          <h1 className="font-serif text-4xl md:text-5xl text-white mb-4 animate-slide-up">Book Your Tattoo</h1>
-          <p className="text-white/70 text-lg max-w-2xl mx-auto animate-slide-up animation-delay-200">
+          <h1 className="font-serif text-4xl md:text-5xl text-foreground mb-4 animate-slide-up">Book Your Tattoo</h1>
+          <p className="text-foreground/70 text-lg max-w-2xl mx-auto animate-slide-up animation-delay-200">
             Send a consultation request—include your idea, placement, size, and any reference links or images.
             We&apos;ll reply by email with availability and pricing.
           </p>
@@ -29,19 +29,44 @@ export default function BookingPage() {
 
 async function uploadToCloudinary(files: File[]): Promise<string[]> {
   if (!CLOUD_NAME || !UPLOAD_PRESET) return [];
+
+  // Limit to 3 files
+  const limitedFiles = files.slice(0, 3);
   const uploads: string[] = [];
-  for (const file of files) {
+
+  for (const file of limitedFiles) {
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error(`File ${file.name} is too large. Maximum size is 10MB.`);
+    }
+
     const data = new FormData();
     data.append("file", file);
     data.append("upload_preset", UPLOAD_PRESET);
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-      method: "POST",
-      body: data,
-    });
-    if (!res.ok) throw new Error("Upload failed");
-    const json = await res.json();
-    if (json.secure_url) uploads.push(String(json.secure_url));
+
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+        method: "POST",
+        body: data,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(`Upload failed for ${file.name}: ${errorData.error?.message || 'Unknown error'}`);
+      }
+
+      const json = await res.json();
+      if (json.secure_url) {
+        uploads.push(String(json.secure_url));
+      } else {
+        throw new Error(`Upload failed for ${file.name}: No secure URL returned`);
+      }
+    } catch (error) {
+      console.error(`Error uploading ${file.name}:`, error);
+      throw error;
+    }
   }
+
   return uploads;
 }
 
@@ -109,8 +134,13 @@ function BookingForm() {
       const files = formData.getAll("images") as File[];
       const validFiles = files.filter((f) => f && typeof f === "object" && (f as File).size);
       if (uploadsEnabled && validFiles.length) {
-        const urls = await uploadToCloudinary(validFiles as File[]);
-        payload.uploads = urls;
+        try {
+          const urls = await uploadToCloudinary(validFiles as File[]);
+          payload.uploads = urls;
+        } catch (uploadError: any) {
+          console.error("Upload error:", uploadError);
+          throw new Error(`Image upload failed: ${uploadError.message}`);
+        }
       }
 
       const res = await fetch("/api/booking", {
@@ -118,12 +148,18 @@ function BookingForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error("Request failed");
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to submit booking request");
+      }
+
       const data = await res.json();
       if (data && data.bookingId) setBookingId(String(data.bookingId));
       setStatus("success");
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (error: any) {
+      console.error("Submission error:", error);
+      setError(error.message || "Something went wrong. Please try again.");
       setStatus("error");
     }
   }
@@ -136,13 +172,13 @@ function BookingForm() {
 
   if (status === "success") {
     return (
-      <div className="rounded-md border border-white/10 p-6 bg-white/5 text-white space-y-4">
+      <div className="rounded-md border border-white/10 p-6 bg-background/5 text-foreground space-y-4">
         <div>Thanks! Your request was sent. We&apos;ll get back to you by email.</div>
         {depositsEnabled && (
-          <DepositCTA 
-            email={emailForDeposit ?? undefined} 
-            amountCents={BOOKING.depositAmountCents} 
-            currency={BOOKING.currency} 
+          <DepositCTA
+            email={emailForDeposit ?? undefined}
+            amountCents={BOOKING.depositAmountCents}
+            currency={BOOKING.currency}
             bookingId={bookingId ?? undefined}
             customerInfo={formData}
           />
@@ -154,55 +190,55 @@ function BookingForm() {
   return (
     <form onSubmit={handleSubmit} className="grid gap-6 max-w-2xl mx-auto" encType="multipart/form-data">
       <div className="grid gap-1">
-        <label className="text-sm text-white/80" htmlFor="name">Name*</label>
-        <input id="name" name="name" required className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-300 hover:bg-white/15" placeholder="Your full name" />
+        <label className="text-sm text-foreground/80" htmlFor="name">Name*</label>
+        <input id="name" name="name" required className="w-full bg-background/10 border border-white/20 rounded-lg px-4 py-3 text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/50 focus:border-foreground/50 transition-all duration-300 hover:bg-background/15" placeholder="Your full name" />
       </div>
       <div className="grid gap-1">
-        <label className="text-sm text-white/80" htmlFor="email">Email*</label>
-        <input id="email" name="email" type="email" required className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-300 hover:bg-white/15" placeholder="you@example.com" />
+        <label className="text-sm text-foreground/80" htmlFor="email">Email*</label>
+        <input id="email" name="email" type="email" required className="w-full bg-background/10 border border-white/20 rounded-lg px-4 py-3 text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/50 focus:border-foreground/50 transition-all duration-300 hover:bg-background/15" placeholder="you@example.com" />
       </div>
       <div className="grid gap-1">
-        <label className="text-sm text-white/80" htmlFor="phone">Phone</label>
-        <input id="phone" name="phone" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-300 hover:bg-white/15" placeholder="Optional" />
+        <label className="text-sm text-foreground/80" htmlFor="phone">Phone</label>
+        <input id="phone" name="phone" className="w-full bg-background/10 border border-white/20 rounded-lg px-4 py-3 text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/50 focus:border-foreground/50 transition-all duration-300 hover:bg-background/15" placeholder="Optional" />
       </div>
       <div className="grid md:grid-cols-2 gap-4">
         <div className="grid gap-1">
-          <label className="text-sm text-white/80" htmlFor="placement">Placement*</label>
-          <input id="placement" name="placement" required className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-300 hover:bg-white/15" placeholder="e.g. forearm, shoulder" />
+          <label className="text-sm text-foreground/80" htmlFor="placement">Placement*</label>
+          <input id="placement" name="placement" required className="w-full bg-background/10 border border-white/20 rounded-lg px-4 py-3 text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/50 focus:border-foreground/50 transition-all duration-300 hover:bg-background/15" placeholder="e.g. forearm, shoulder" />
         </div>
         <div className="grid gap-1">
-          <label className="text-sm text-white/80" htmlFor="size">Size (cm)*</label>
-          <input id="size" name="size" required className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-300 hover:bg-white/15" placeholder="e.g. 10 x 6 cm" />
+          <label className="text-sm text-foreground/80" htmlFor="size">Size (cm)*</label>
+          <input id="size" name="size" required className="w-full bg-background/10 border border-white/20 rounded-lg px-4 py-3 text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/50 focus:border-foreground/50 transition-all duration-300 hover:bg-background/15" placeholder="e.g. 10 x 6 cm" />
         </div>
       </div>
       <div className="grid gap-1">
-        <label className="text-sm text-white/80" htmlFor="style">Style</label>
-        <input id="style" name="style" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-300 hover:bg-white/15" placeholder="fine line, blackwork, script, etc." />
+        <label className="text-sm text-foreground/80" htmlFor="style">Style</label>
+        <input id="style" name="style" className="w-full bg-background/10 border border-white/20 rounded-lg px-4 py-3 text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/50 focus:border-foreground/50 transition-all duration-300 hover:bg-background/15" placeholder="fine line, blackwork, script, etc." />
       </div>
       <div className="grid gap-1">
-        <label className="text-sm text-white/80" htmlFor="references">Reference links</label>
-        <input id="references" name="references" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-300 hover:bg-white/15" placeholder="Paste URLs to inspiration images" />
+        <label className="text-sm text-foreground/80" htmlFor="references">Reference links</label>
+        <input id="references" name="references" className="w-full bg-background/10 border border-white/20 rounded-lg px-4 py-3 text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/50 focus:border-foreground/50 transition-all duration-300 hover:bg-background/15" placeholder="Paste URLs to inspiration images" />
       </div>
 
       {uploadsEnabled && (
         <div className="grid gap-1">
-          <label className="text-sm text-white/80" htmlFor="images">Upload reference images (max 3)</label>
-          <input id="images" name="images" type="file" accept="image/*" multiple className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-white file:text-black hover:file:bg-gray-100 transition-all duration-300 hover:bg-white/15" />
-          <p className="text-xs text-white/50">Images upload to Cloudinary using your unsigned preset.</p>
+          <label className="text-sm text-foreground/80" htmlFor="images">Upload reference images (max 3)</label>
+          <input id="images" name="images" type="file" accept="image/*" multiple className="w-full bg-background/10 border border-white/20 rounded-lg px-4 py-3 text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-background file:text-foreground hover:file:bg-background/80 transition-all duration-300 hover:bg-background/15" />
+          <p className="text-xs text-foreground/50">Images upload to Cloudinary using your unsigned preset.</p>
         </div>
       )}
 
       <div className="grid gap-1">
-        <label className="text-sm text-white/80" htmlFor="preferredDates">Preferred date(s)</label>
-        <input id="preferredDates" name="preferredDates" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-300 hover:bg-white/15" placeholder="e.g. weekends, next month" />
+        <label className="text-sm text-foreground/80" htmlFor="preferredDates">Preferred date(s)</label>
+        <input id="preferredDates" name="preferredDates" className="w-full bg-background/10 border border-white/20 rounded-lg px-4 py-3 text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/50 focus:border-foreground/50 transition-all duration-300 hover:bg-background/15" placeholder="e.g. weekends, next month" />
       </div>
       <div className="grid gap-1">
-        <label className="text-sm text-white/80" htmlFor="budget">Budget</label>
-        <input id="budget" name="budget" className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-300 hover:bg-white/15" placeholder="Optional" />
+        <label className="text-sm text-foreground/80" htmlFor="budget">Budget</label>
+        <input id="budget" name="budget" className="w-full bg-background/10 border border-white/20 rounded-lg px-4 py-3 text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/50 focus:border-foreground/50 transition-all duration-300 hover:bg-background/15" placeholder="Optional" />
       </div>
       <div className="grid gap-1">
-        <label className="text-sm text-white/80" htmlFor="details">Your idea*</label>
-        <textarea id="details" name="details" required rows={5} className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition-all duration-300 hover:bg-white/15 resize-none" placeholder="Describe your concept, any text, elements, etc." />
+        <label className="text-sm text-foreground/80" htmlFor="details">Your idea*</label>
+        <textarea id="details" name="details" required rows={5} className="w-full bg-background/10 border border-white/20 rounded-lg px-4 py-3 text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-foreground/50 focus:border-foreground/50 transition-all duration-300 hover:bg-background/15 resize-none" placeholder="Describe your concept, any text, elements, etc." />
       </div>
 
       {error && <div className="text-red-400 text-sm p-3 bg-red-400/10 rounded-lg border border-red-400/20">{error}</div>}
@@ -297,13 +333,13 @@ function DepositCTA({
   return (
     <div className="border-t border-white/10 pt-4 mt-4">
       <div className="mb-3">
-        <h3 className="font-medium text-white">Secure your booking</h3>
-        <p className="text-white/70 text-sm mt-1">
+        <h3 className="font-medium text-foreground">Secure your booking</h3>
+        <p className="text-foreground/70 text-sm mt-1">
           Pay a deposit to secure your preferred date. This amount will be applied to your final tattoo cost.
         </p>
       </div>
-      <button 
-        onClick={handleDeposit} 
+      <button
+        onClick={handleDeposit}
         disabled={go}
         className="rounded-md bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-green-700 disabled:opacity-60 transition-colors"
       >
@@ -314,7 +350,7 @@ function DepositCTA({
           {err}
         </div>
       )}
-      <p className="text-white/50 text-xs mt-2">
+      <p className="text-foreground/50 text-xs mt-2">
         You'll be redirected to PesaPal for secure payment processing
       </p>
     </div>

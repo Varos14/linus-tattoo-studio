@@ -64,9 +64,9 @@ function CheckoutSuccessPage() {
     return (
       <div className="py-12">
         <Container>
-          <div className="text-white">
+          <div className="text-foreground">
             <h1 className="font-serif text-3xl">Verifying payment...</h1>
-            <p className="text-white/80 mt-2">Please wait while we confirm your deposit.</p>
+            <p className="text-foreground/80 mt-2">Please wait while we confirm your deposit.</p>
           </div>
         </Container>
       </div>
@@ -77,10 +77,10 @@ function CheckoutSuccessPage() {
     return (
       <div className="py-12">
         <Container>
-          <div className="text-white">
+          <div className="text-foreground">
             <h1 className="font-serif text-3xl">Payment verification issue</h1>
-            <p className="text-white/80 mt-2">{error || "Unable to verify payment"}</p>
-            <p className="text-white/60 mt-4 text-sm">
+            <p className="text-foreground/80 mt-2">{error || "Unable to verify payment"}</p>
+            <p className="text-foreground/60 mt-4 text-sm">
               If you completed the payment, don&apos;t worry! We&apos;ll receive the notification and contact you shortly.
             </p>
           </div>
@@ -88,7 +88,6 @@ function CheckoutSuccessPage() {
       </div>
     );
   }
-
   const formattedAmount = new Intl.NumberFormat('en-UG', {
     style: 'currency',
     currency: 'UGX'
@@ -112,46 +111,46 @@ function CheckoutSuccessPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h1 className="font-serif text-3xl text-white">Deposit received</h1>
-            <p className="text-white/80 mt-2">
+            <h1 className="font-serif text-3xl text-foreground">Deposit received</h1>
+            <p className="text-foreground/80 mt-2">
               Thank you! Your deposit was received successfully. We&apos;ll confirm your appointment details by email.
             </p>
           </div>
 
-          <div className="rounded-lg border border-white/10 p-6 bg-white/5 space-y-4">
-            <h2 className="text-xl font-medium text-white mb-4">Payment Receipt</h2>
+          <div className="rounded-lg border border-white/10 p-6 bg-background/5 space-y-4">
+            <h2 className="text-xl font-medium text-foreground mb-4">Payment Receipt</h2>
 
             <div className="space-y-3">
               <div className="flex justify-between py-2 border-b border-white/10">
-                <span className="text-white/60">Amount Paid</span>
-                <span className="text-white font-medium">{formattedAmount}</span>
+                <span className="text-foreground/60">Amount Paid</span>
+                <span className="text-foreground font-medium">{formattedAmount}</span>
               </div>
 
               <div className="flex justify-between py-2 border-b border-white/10">
-                <span className="text-white/60">Payment Method</span>
-                <span className="text-white">{paymentDetails.paymentMethod}</span>
+                <span className="text-foreground/60">Payment Method</span>
+                <span className="text-foreground">{paymentDetails.paymentMethod}</span>
               </div>
 
               <div className="flex justify-between py-2 border-b border-white/10">
-                <span className="text-white/60">Transaction ID</span>
-                <span className="text-white font-mono text-sm">{paymentDetails.transactionId}</span>
+                <span className="text-foreground/60">Transaction ID</span>
+                <span className="text-foreground font-mono text-sm">{paymentDetails.transactionId}</span>
               </div>
 
               <div className="flex justify-between py-2 border-b border-white/10">
-                <span className="text-white/60">Date</span>
-                <span className="text-white">{formattedDate}</span>
+                <span className="text-foreground/60">Date</span>
+                <span className="text-foreground">{formattedDate}</span>
               </div>
 
               <div className="flex justify-between py-2">
-                <span className="text-white/60">Status</span>
+                <span className="text-foreground/60">Status</span>
                 <span className="text-green-400 font-medium">{paymentDetails.status}</span>
               </div>
             </div>
           </div>
 
-          <div className="mt-8 rounded-lg border border-white/10 p-6 bg-white/5">
-            <h3 className="text-lg font-medium text-white mb-3">What's next?</h3>
-            <ul className="space-y-2 text-white/80">
+          <div className="mt-8 rounded-lg border border-white/10 p-6 bg-background/5">
+            <h3 className="text-lg font-medium text-foreground mb-3">What's next?</h3>
+            <ul className="space-y-2 text-foreground/80">
               <li className="flex items-start">
                 <span className="text-green-400 mr-2">✓</span>
                 <span>A confirmation email has been sent to {paymentDetails.customerEmail}</span>
@@ -174,7 +173,7 @@ function CheckoutSuccessPage() {
           <div className="mt-6">
             <a
               href="/"
-              className="inline-block rounded-md bg-white text-black px-4 py-2 text-sm hover:bg-white/90 transition-colors"
+              className="inline-block rounded-md bg-foreground text-background px-4 py-2 text-sm hover:bg-foreground/90 transition-colors"
             >
               Back to home
             </a>
