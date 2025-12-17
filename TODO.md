@@ -1,17 +1,39 @@
-# Fix TypeScript Errors in Export and Refund Routes
+# Fix Pesapal Authentication Error
 
-## Tasks
-- [x] Update imports in src/app/admin/bookings/export/route.ts to use Firebase functions from src/lib/db.ts
-- [x] Remove incorrect Prisma imports and replace with proper Firebase imports
-- [x] Fix getBookings and getDeposits calls in bookings export route
-- [x] Update imports in src/app/admin/deposits/export/route.ts to use Firebase functions
-- [x] Fix getDeposits call in deposits export route
-- [x] Update imports in src/app/admin/refund/route.ts to use Firebase functions
-- [x] Replace Prisma calls with Firebase functions in refund route
-- [x] Add proper TypeScript types for parameters
-- [x] Fix TypeScript errors in src/app/admin/bookings/[id]/page.tsx
-- [x] Fix TypeScript errors in src/app/admin/bookings/page.tsx
-- [x] Fix TypeScript errors in src/app/admin/deposits/page.tsx
-- [x] Fix TypeScript errors in src/lib/actions/verifyPayment.ts
-- [x] Fix TypeScript errors in src/lib/db.ts
-- [ ] Test the changes to ensure functionality works correctly
+## Issue
+Console error: "Deposit error: Error: Payment processing failed: Failed to authenticate with payment gateway" at handleDeposit in booking page.
+
+## Root Cause
+The error occurs in `src/lib/pesapal.ts` when attempting to authenticate with Pesapal API. This happens when:
+1. PESAPAL_CONSUMER_KEY or PESAPAL_CONSUMER_SECRET environment variables are missing
+2. The credentials are invalid for the specified environment
+3. Environment mismatch (using production credentials in sandbox or vice versa)
+
+## Steps to Fix
+
+### 1. Verify Environment Variables
+- [ ] Check that `.env.local` or `.env` contains:
+  - `PESAPAL_CONSUMER_KEY=your_consumer_key_here`
+  - `PESAPAL_CONSUMER_SECRET=your_consumer_secret_here`
+  - `PESAPAL_ENVIRONMENT=sandbox` (or `production`)
+
+### 2. Validate Credentials
+- [ ] Ensure credentials match the environment:
+  - Sandbox: Use sandbox credentials from Pesapal dashboard
+  - Production: Use production credentials from Pesapal dashboard
+
+### 3. Check Environment Configuration
+- [ ] Verify `PESAPAL_ENVIRONMENT` is set correctly:
+  - `sandbox` for testing (cybqa.pesapal.com)
+  - `production` for live payments (pay.pesapal.com)
+
+### 4. Test Authentication
+- [ ] Restart the development server after updating environment variables
+- [ ] Try making a deposit to verify the fix
+
+## Additional Improvements Made
+- [x] Modified `src/lib/pesapal.ts` to throw an error instead of just logging when credentials are missing
+- [x] This will provide clearer error messages for configuration issues
+
+## Files Modified
+- `src/lib/pesapal.ts`: Improved error handling for missing credentials

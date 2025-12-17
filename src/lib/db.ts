@@ -22,8 +22,12 @@ const DEPOSITS_COLLECTION = 'deposits';
 
 // Booking operations
 export const createBooking = async (data: Omit<Booking, 'id' | 'createdAt'>): Promise<string> => {
+  // Filter out undefined values to prevent Firebase errors
+  const cleanData = Object.fromEntries(
+    Object.entries(data).filter(([key, value]) => value !== undefined)
+  );
   const docRef = await addDoc(collection(db, BOOKINGS_COLLECTION), {
-    ...data,
+    ...cleanData,
     createdAt: Timestamp.now(),
   });
   return docRef.id;

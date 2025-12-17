@@ -3,6 +3,7 @@ import Image from "next/image";
 import Container from "@/components/Container";
 import { STUDIO } from "@/lib/config";
 import Hero from "@/components/Hero";
+import { Instagram, Facebook, Twitter, Ghost } from "lucide-react";
 
 export default function Home() {
   const galleryImages = [
@@ -27,12 +28,12 @@ export default function Home() {
     },
     {
       name: "Jones",
-      image: "/lewis.jpg",
+      image: "/white artist.jpeg",
       specialty: "Geometric patterns, abstract art"
     },
     {
       name: "Varos",
-      image: "/location.jpg",
+      image: "/sydney.jpeg",
       specialty: "Watercolor, realistic portraits"
     }
   ];
@@ -176,18 +177,18 @@ export default function Home() {
                 Contact Us
               </Link>
             </div>
-            <div className="mt-10 flex justify-center space-x-6">
-              <a href={STUDIO.instagram} target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors duration-300">
-                <span className="text-2xl">📷</span>
+            <div className="mt-10 flex justify-center space-x-8">
+              <a href={STUDIO.instagram} target="_blank" rel="noopener noreferrer" className="group flex items-center justify-center w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 transform hover:scale-110">
+                <Instagram size={24} className="text-white/70 group-hover:text-white transition-colors duration-300" />
               </a>
-              <a href={STUDIO.facebook} target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors duration-300">
-                <span className="text-2xl">📘</span>
+              <a href={STUDIO.facebook} target="_blank" rel="noopener noreferrer" className="group flex items-center justify-center w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 transform hover:scale-110">
+                <Facebook size={24} className="text-white/70 group-hover:text-white transition-colors duration-300" />
               </a>
-              <a href={STUDIO.snapchat} target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors duration-300">
-                <span className="text-2xl">👻</span>
+              <a href={STUDIO.snapchat} target="_blank" rel="noopener noreferrer" className="group flex items-center justify-center w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 transform hover:scale-110">
+                <Ghost size={24} className="text-white/70 group-hover:text-white transition-colors duration-300" />
               </a>
-              <a href={STUDIO.twitter} target="_blank" rel="noopener noreferrer" className="text-white/60 hover:text-white transition-colors duration-300">
-                <span className="text-2xl">🐦</span>
+              <a href={STUDIO.twitter} target="_blank" rel="noopener noreferrer" className="group flex items-center justify-center w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 transform hover:scale-110">
+                <Twitter size={24} className="text-white/70 group-hover:text-white transition-colors duration-300" />
               </a>
             </div>
           </div>

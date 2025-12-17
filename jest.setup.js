@@ -2,6 +2,7 @@ require('@testing-library/jest-dom')
 
 // Mock Firebase
 jest.mock('firebase/firestore', () => ({
+  getFirestore: jest.fn(() => ({})),
   collection: jest.fn(),
   doc: jest.fn(),
   addDoc: jest.fn(),

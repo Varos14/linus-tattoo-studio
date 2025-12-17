@@ -1,5 +1,3 @@
-import { sendBookingConfirmationEmail, sendDepositConfirmationEmail } from '../email';
-
 // Mock Resend
 const mockSend = jest.fn();
 jest.mock('resend', () => ({
@@ -10,6 +8,7 @@ jest.mock('resend', () => ({
   })),
 }));
 
+import { sendBookingConfirmationEmail, sendDepositConfirmationEmail } from '../email';
 import { Resend } from 'resend';
 
 describe('Email Utilities', () => {
@@ -38,7 +37,7 @@ describe('Email Utilities', () => {
 
       expect(mockSend).toHaveBeenCalledWith({
         from: 'Linus Tattoo Studio <noreply@linustattoostudio.com>',
-        to: mockBookingData.email,
+        to: [mockBookingData.email],
         subject: 'Booking Confirmation - Linus Tattoo Studio',
         html: expect.stringContaining('John Doe'),
       });
@@ -69,7 +68,7 @@ describe('Email Utilities', () => {
 
       expect(mockSend).toHaveBeenCalledWith({
         from: 'Linus Tattoo Studio <noreply@linustattoostudio.com>',
-        to: mockDepositData.email,
+        to: [mockDepositData.email],
         subject: 'Deposit Confirmation - Linus Tattoo Studio',
         html: expect.stringContaining('$100.00'),
       });

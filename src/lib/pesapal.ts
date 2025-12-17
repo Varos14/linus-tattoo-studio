@@ -72,7 +72,7 @@ class PesapalService {
       : 'https://cybqa.pesapal.com/pesapalv3';
 
     if (!this.config.consumerKey || !this.config.consumerSecret) {
-        console.error("CRITICAL: Pesapal Consumer Key or Secret is not configured in environment variables.");
+        throw new Error("Pesapal Consumer Key or Secret is not configured in environment variables.");
     }
   }
 

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
-import { createBooking } from "@/lib/db";
+import { adminDb } from "@/lib/firebase-admin";
+import { Timestamp } from "firebase-admin/firestore";
 
-const resendApiKey = process.env.RESEND_API_KEY;
-const toEmail = process.env.BOOKINGS_TO_EMAIL || process.env.NEXT_PUBLIC_STUDIO_EMAIL || "studio@example.com";
+const resendApiKey = process.env.RESEND_API_KEY||process.env.NEXT_PUBLIC_RESEND_API_KEY||"re_g7y1ZM7F_27TGr88cBAUsgcnPdC3BUFR1";
+const toEmail = process.env.BOOKINGS_TO_EMAIL || process.env.NEXT_PUBLIC_STUDIO_EMAIL || "geraldvaros@gmail.com";
 
 type BookingPayload = {
   name: string;
@@ -29,19 +30,27 @@ export async function POST(req: NextRequest) {
     }
 
     // Persist booking
-    const bookingId = await createBooking({
+    const bookingData: Omit<BookingPayload, 'id' | 'createdAt'> = {
       name: String(body.name),
       email: String(body.email),
-      phone: body.phone || undefined,
       placement: String(body.placement),
       size: String(body.size),
-      style: body.style || undefined,
-      preferredDates: body.preferredDates || undefined,
-      budget: body.budget || undefined,
-      references: body.references || undefined,
-      uploads: Array.isArray(body.uploads) ? body.uploads : undefined,
       details: String(body.details),
+    };
+
+    if (body.phone) bookingData.phone = body.phone;
+    if (body.style) bookingData.style = body.style;
+    if (body.preferredDates) bookingData.preferredDates = body.preferredDates;
+    if (body.budget) bookingData.budget = body.budget;
+    if (body.references) bookingData.references = body.references;
+    if (Array.isArray(body.uploads)) bookingData.uploads = body.uploads;
+
+    // Persist booking using admin SDK
+    const docRef = await adminDb.collection('bookings').add({
+      ...bookingData,
+      createdAt: Timestamp.now(),
     });
+    const bookingId = docRef.id;
 
     const html = renderEmail(body as BookingPayload);
 
@@ -64,8 +73,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, booked: true, bookingId, queued: true });
   } catch (e: unknown) {
-    console.error(e);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    console.error("Booking API error:", e);
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 });
   }
 }
 
