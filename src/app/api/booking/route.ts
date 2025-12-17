@@ -45,12 +45,25 @@ export async function POST(req: NextRequest) {
     if (body.references) bookingData.references = body.references;
     if (Array.isArray(body.uploads)) bookingData.uploads = body.uploads;
 
-    // Persist booking using admin SDK
-    const docRef = await adminDb.collection('bookings').add({
-      ...bookingData,
-      createdAt: Timestamp.now(),
-    });
-    const bookingId = docRef.id;
+    // Persist booking using admin SDK (if available)
+    let bookingId = null;
+    if (adminDb) {
+      try {
+        const docRef = await adminDb.collection('bookings').add({
+          ...bookingData,
+          createdAt: Timestamp.now(),
+        });
+        bookingId = docRef.id;
+      } catch (firestoreError) {
+        console.error('Failed to save booking to Firestore:', firestoreError);
+        // Generate a temporary booking ID as fallback
+        bookingId = `local-${Date.now()}`;
+      }
+    } else {
+      console.warn('Firebase Admin not initialized, skipping Firestore save');
+      // Generate a temporary booking ID for local development
+      bookingId = `local-${Date.now()}`;
+    }
 
     const html = renderEmail(body as BookingPayload);
 

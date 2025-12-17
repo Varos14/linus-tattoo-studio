@@ -1,14 +1,15 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
-// Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyAb8iEF6rD3AE0VSxvAhbYyUe1RP8DKNPA",
+  authDomain: "linus-tatoo-studio.firebaseapp.com",
+  projectId: "linus-tatoo-studio",
+  storageBucket: "linus-tatoo-studio.firebasestorage.app",
+  messagingSenderId: "769818796854",
+  appId: "1:769818796854:web:3fa7595339185fbaf6c997",
+  measurementId: "G-J5S3NM3T3Y"
 };
 
 // Initialize Firebase
